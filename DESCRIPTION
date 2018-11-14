@@ -1,0 +1,11 @@
+Package: SSLB
+Type: Package
+Title: Spike-and-Slab Lasso Biclustering
+Version: 1.0
+Date: 2018-04-02
+Author: Gemma Moran 
+Maintainer: Gemma Moran <gmoran@wharton.upenn.edu>
+Description: This package implements a Bayesian biclustering algorithm via the Spike-and-Slab Lasso.
+License: What license is it under?
+Imports: Rcpp
+LinkingTo: Rcpp, RcppArmadillo
