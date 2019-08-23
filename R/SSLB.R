@@ -5,16 +5,14 @@ SSLB <- function(Y,
                  lambda0s,
                  lambda1_tilde,
                  lambda0_tildes,
-                 IBP = 0,
+                 IBP = 1,
                  a, 
                  b = 1, 
                  a_tilde, 
                  b_tilde = 1, 
                  alpha,
-                 d = 0.5,
-                 sigdf = 1,
-                 sigquant = 0.5,
-                 EPSILON = 0.05, 
+                 d = 0,
+                 EPSILON = 0.01, 
                  MAX_ITER = 500) {
   
   N <- nrow(Y)
@@ -25,32 +23,35 @@ SSLB <- function(Y,
   }
 
   if (missing(a)) {
-    a <- 1/(G * K_init)
+    a <- 1/(K_init)
   }
   if (missing(a_tilde)) {
-    a_tilde <- 1/(N * K_init)
+    a_tilde <- 1/(K_init)
   }
 
   if (missing(alpha)) {
-    alpha <- 1/(N * K_init)
+    alpha <- 1/N
   }
   
-  sigest <- apply(Y, 2, function(x) quantile(x, 0.75) - quantile(x, 0.25)) / 1.35
+  sigs <- apply(Y, 2, sd)
   
-  sigest <- median(sigest)
+  sigquant <- 0.5
+  sigdf <- 3
+  
+  sigest <- quantile(sigs, 0.05)
   qchi <- qchisq(1 - sigquant, sigdf)
   xi <- sigest^2 * qchi / sigdf
   eta <- sigdf
-  sigmas_mode <- eta * xi/(eta + 2)
-  sigmas_init <- rep(sigmas_mode, G)
+  sigmas_median <- sigest^2
+  sigmas_init <- rep(sigmas_median, G)
   sigma_min <- sigest^2 / G
   
   
-  B_init <- matrix(rexp(G * K_init), nrow = G, ncol = K_init)
-  Tau_init <- matrix(rep(N * K_init), nrow = N, ncol = K_init)
+  B_init <- matrix(rexp(G * K_init, rate = 1), nrow = G, ncol = K_init)
+  Tau_init <- matrix(100, nrow = N, ncol = K_init)
   thetas_init <- rep(0.5, K_init)
-# nus_init <- sort(rbeta(K_init, 1, 1), decreasing = T)
-  nus_init <- c(0.5, rep(1, K_init-1))
+  nus_init <- sort(rbeta(K_init, 1, 1), decreasing = T)
+#  nus_init <- c(0.5, rep(1, K_init-1))
   theta_tildes_init <- rep(0.5, K_init)
   
   nlambda <- length(lambda0s)
@@ -67,6 +68,8 @@ SSLB <- function(Y,
   Gamma_tilde <- Gamma_tilde[!sapply(Gamma_tilde, is.null)]
   B <- res$B
   B <- B[!sapply(B, is.null)]
+  ML <- res$ML
+  ML <- ML[!sapply(ML, is.null)]
   
   thetas <- lapply(res$thetas, as.vector)
   thetas <- thetas[!sapply(thetas, is.null)]
@@ -95,9 +98,10 @@ SSLB <- function(Y,
     if (lambda1 != lambda0s[l]) {
       X[[l]][Gamma_tilde[[l]] < 0.5] <- 0
       Tau[[l]][Gamma_tilde[[l]] < 0.5] <- 0
-      keep <- which(apply(X[[l]], 2, function(x) any(x != 0)))
+      keep <- which(apply(X[[l]], 2, function(x) sum(x != 0) > 1))
       X[[l]] <- as.matrix(X[[l]][, keep])
       B[[l]] <- as.matrix(B[[l]][, keep])
+      ML[[l]] <- as.matrix(ML[[l]][keep, keep])
       Tau[[l]] <- as.matrix(Tau[[l]][, keep])
       Gamma_tilde[[l]] <- as.matrix(Gamma_tilde[[l]][, keep])
       thetas[[l]] <- thetas[[l]][keep]
@@ -111,8 +115,8 @@ SSLB <- function(Y,
   
   
   
-  names_out <- c("X", "B", "K", "path", "B_init", "Tau_init")
-  names_path <- c("X", "B", "K", "Tau", "Gamma_tilde", "thetas", 
+  names_out <- c("X", "B", "Gamma_tilde", "ML", "K", "path", "init_B")
+  names_path <- c("X", "B", "K", "Tau", "Gamma_tilde", "ML", "thetas", 
                   "theta_tildes", "sigmas", "lambda0s", "lambda1", 
                   "lambda0_tildes", "lambda1_tilde", "iter")
   
@@ -125,6 +129,7 @@ SSLB <- function(Y,
   path$K <- K
   path$Tau <- Tau
   path$Gamma_tilde <- Gamma_tilde
+  path$ML <- ML
   path$thetas <- thetas
   path$theta_tildes <- theta_tildes
   path$nus <- nus
@@ -140,6 +145,7 @@ SSLB <- function(Y,
   out$Gamma_tilde <- Gamma_tilde[[nlambda]]
   out$B <- B[[nlambda]]
   out$K <- K[nlambda]
+  out$ML <- ML[[nlambda]]
   out$init_B <- B_init
 
   return(out)

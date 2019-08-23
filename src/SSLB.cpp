@@ -88,6 +88,7 @@ RcppExport SEXP cSSLB(
 
   List B_all(L);
   List X_all(L);
+  List ML_all(L);
   List Tau_all(L);
   List Gamma_tilde_all(L);
   mat sigmas_all = zeros<mat>(G, L);
@@ -112,14 +113,11 @@ RcppExport SEXP cSSLB(
       NITERS(l)++;
       ITER = NITERS(l);
 
-      // Update X
-      E_step_X(X, V_traces, ML, B, sigmas, Tau, Y);
 
       // Update Gamma_tildes
       if (lambda1 != lambda0) {
         Gamma_tilde = E_step_Gamma_tilde(Tau, theta_tildes, lambda1_tilde, lambda0_tilde);
       }
-      
       
       // Re-order in descending order of Gamma_tilde_sum (for IBP)
       for (int k = 0; k < K; k++) {
@@ -134,7 +132,6 @@ RcppExport SEXP cSSLB(
         uvec Gamma_tilde_order = stable_sort_index(Gamma_tilde_sum, "descend");
 
         if (any(Gamma_tilde_order != one_to_K)) {
-          X = X.cols(Gamma_tilde_order);
           Gamma_tilde = Gamma_tilde.cols(Gamma_tilde_order);
           Gamma_tilde_sum = Gamma_tilde_sum.elem(Gamma_tilde_order);
 
@@ -147,6 +144,9 @@ RcppExport SEXP cSSLB(
           nus = nus.elem(Gamma_tilde_order);
         }
       }
+
+      // Update X
+      E_step_X(X, V_traces, ML, B, sigmas, Tau, Y);
 
 
       // Update B and sigmas
@@ -178,7 +178,6 @@ RcppExport SEXP cSSLB(
       // Update Tau
       Tau = M_step_Tau(X, Gamma_tilde, V_traces, lambda1_tilde, lambda0_tilde);
 
-      
        // remove zeros
       if ((l != 0 && lambda1 != lambda0) && ITER % 100 == 0) {
         vec B_zero = zeros<vec>(K);
@@ -190,7 +189,7 @@ RcppExport SEXP cSSLB(
             }
           }
           for (int i = 0; i < N; i++) {
-            if (Gamma_tilde(i, k) < 0.005) {
+            if (Gamma_tilde(i, k) < 0.025) {
               X_zero(k)++;
             }
           }
@@ -237,7 +236,7 @@ RcppExport SEXP cSSLB(
       
       // remove zero components
       if (K == 0) {
-        Rcout << "Number of components is 0" << endl;
+        Rcout << "Number of biclusters is 0" << endl;
         break;
       }
 
@@ -257,9 +256,9 @@ RcppExport SEXP cSSLB(
       }
 
       // Rescale X and B 
-      if (lambda0 != lambda1) {
-        rescale_X_B(X, B);
-      }
+     if (lambda0 != lambda1) {
+      rescale_X_B(X, B);
+     }
       
     }
 
@@ -275,6 +274,7 @@ RcppExport SEXP cSSLB(
 
     B_all[l] = B;
     X_all[l] = X;
+    ML_all[l] = ML;
     Tau_all[l] = Tau;
     Gamma_tilde_all[l] = Gamma_tilde;
     sigmas_all.col(l) = sigmas;
@@ -282,7 +282,9 @@ RcppExport SEXP cSSLB(
     theta_tildes_all[l] = theta_tildes;
     nus_all[l] = nus;
 
-
+    if (K == 0) {
+      break;
+    }
 
     // if (ITER <= 5) {
     //   break;
@@ -290,9 +292,10 @@ RcppExport SEXP cSSLB(
 
   }
 
-  List out(19);
+  List out(20);
   out["X"] = X_all;
   out["B"] = B_all;
+  out["ML"] = ML_all;
   out["Tau"] = Tau_all;
   out["Gamma_tilde"] = Gamma_tilde_all;
   out["sigmas"] = sigmas_all;

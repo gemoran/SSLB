@@ -24,6 +24,7 @@ int check_convergence(mat &B, mat &B_old, double EPSILON) {
 
 // E-Step for factor matrix X
 void E_step_X(mat &X, mat &V_traces, mat &ML, mat &B, vec &sigmas, mat &Tau, mat &Y) { 
+  
   int K = Tau.n_cols;
   mat SinvB = B.each_col() / sigmas;
   mat tBSinvB = trans(B) * SinvB;
@@ -32,10 +33,14 @@ void E_step_X(mat &X, mat &V_traces, mat &ML, mat &B, vec &sigmas, mat &Tau, mat
   mat Vinv = zeros<mat>(K, K);
   vec X_mean = zeros<vec>(K);
   vec e(K);
-  e.fill(1e-8);
+  e.fill(1e-5);
   mat keep_sympd = diagmat(e);
 
   for(int i = 0; i < Tau.n_rows; i++) {
+    if (i % 100 == 0) {
+      Rcpp::checkUserInterrupt();
+    }
+
     Vinv = tBSinvB + diagmat(1/Tau.row(i));
     V = inv_sympd(Vinv + keep_sympd);
     V_traces.row(i) = trans(diagvec(V));
@@ -159,7 +164,7 @@ vec SSLASSO(vec &y, mat &X, vec &X_sumsq, vec &beta_old, double lambda1, double 
   int K = X.n_cols;
   vec beta = beta_old;
   double eps = 0.05;
-  int max_iter = 2 * K;
+  int max_iter = 100;
   int iter = 0;
   vec r = y - X * beta;
   vec z = zeros<vec>(K);
@@ -200,6 +205,9 @@ mat M_step_B(mat &Y, mat &B_old, mat &X, mat &ML, vec &sigmas, vec &thetas, doub
   vec Yj;
   vec out = zeros<vec>(K);
   for(int j = 0; j < G; j++) {
+    if (j % 100 == 0) {
+      Rcpp::checkUserInterrupt();
+    }
     Yj = Y_star.col(j);
     beta_old = trans(B_old.row(j));
     out = SSLASSO(Yj, X_star, X_sumsq, beta_old, lambda1, lambda0, thetas, sigmas(j));
@@ -276,13 +284,13 @@ void rescale_X_B(mat &X, mat &B) {
 
   for(int k = 0; k < K; k++) {
     for (int i = 0; i < N; i++) {
-      X_norm += pow(X(i, k), 2);
+      X_norm += fabs(X(i, k));
     }
     for (int j = 0; j < G; j++) {
-      B_norm += pow(B(j, k), 2);
+      B_norm += fabs(B(j, k));
     }
     if ((X_norm > 0) && (B_norm > 0)) {
-      d(k) = pow(X_norm / B_norm, 0.25);
+      d(k) = pow(X_norm / B_norm, 0.5);
     }
     X_norm = 0;
     B_norm = 0;
