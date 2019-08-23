@@ -1,6 +1,6 @@
-# SSLB
+# SSLB R Package
 
-This repository contains R Package SSLB. SSLB implements Spike-and-Slab Biclustering.
+This repository contains the R package SSLB, which implements the method Spike-and-Slab Lasso Biclustering.
 
 ## Installation 
 
