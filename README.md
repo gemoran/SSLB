@@ -6,5 +6,5 @@ This repository contains the R package SSLB, which implements the method Spike-a
 
 ```
 library(devtools)
-install_github("gemma-e-moran/SSLB")
+install_github("gemoran/SSLB")
 ```
