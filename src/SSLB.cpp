@@ -1,6 +1,7 @@
 #include "SSLB.h"
 
-RcppExport SEXP cSSLB(
+// [[Rcpp::export]]
+SEXP cSSLB(
   SEXP Y_SEXP, 
   SEXP B_init,
   SEXP sigmas_init,

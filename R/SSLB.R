@@ -56,9 +56,9 @@ SSLB <- function(Y,
   
   nlambda <- length(lambda0s)
   
-  res <- .Call("cSSLB", Y, B_init, sigmas_init, Tau_init, thetas_init, theta_tildes_init, 
+  res <- cSSLB(Y, B_init, sigmas_init, Tau_init, thetas_init, theta_tildes_init, 
     nus_init, lambda1, lambda0s, lambda1_tilde, lambda0_tildes, a, b, 
-        a_tilde, b_tilde, alpha, d, eta, xi, sigma_min, IBP, EPSILON, MAX_ITER, PACKAGE = "SSLB")
+        a_tilde, b_tilde, alpha, d, eta, xi, sigma_min, IBP, EPSILON, MAX_ITER)
   
   X <- res$X
   X <- X[!sapply(X, is.null)]

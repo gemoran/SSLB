@@ -1,4 +1,3 @@
 useDynLib(SSLB, .registration=TRUE)
 importFrom(Rcpp, evalCpp)
-importFrom("stats", "qchisq", "quantile", "rbeta", "rexp", "sd")
-export(SSLB)
+exportPattern("^[[:alpha:]]+")

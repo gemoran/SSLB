@@ -32,16 +32,12 @@ void E_step_X(mat &X, mat &V_traces, mat &ML, mat &B, vec &sigmas, mat &Tau, mat
   mat V = zeros<mat>(K, K);
   mat Vinv = zeros<mat>(K, K);
   vec X_mean = zeros<vec>(K);
-  vec e(K);
-  e.fill(1e-5);
+  rowvec e(K);
+  e.fill(1e-6);
   mat keep_sympd = diagmat(e);
 
   for(int i = 0; i < Tau.n_rows; i++) {
-    if (i % 100 == 0) {
-      Rcpp::checkUserInterrupt();
-    }
-
-    Vinv = tBSinvB + diagmat(1/Tau.row(i));
+    Vinv = tBSinvB + diagmat(1/(Tau.row(i) + e));
     V = inv_sympd(Vinv + keep_sympd);
     V_traces.row(i) = trans(diagvec(V));
     X_mean = V * trans(B) * (1/sigmas % trans(Y.row(i)));
@@ -55,7 +51,7 @@ void E_step_X(mat &X, mat &V_traces, mat &ML, mat &B, vec &sigmas, mat &Tau, mat
 // E-Step for loadings indicator matrix Gamma
 mat E_step_Gamma(mat &B, vec &thetas, double lambda1, double lambda0) {
   mat mult_mat = zeros<mat>(B.n_rows, B.n_cols);
-  mult_mat.each_row() = trans((1 - thetas)/(thetas + 1e-8));
+  mult_mat.each_row() = trans((1 - thetas)/(thetas + 1e-6));
   mult_mat = (lambda0/lambda1) * mult_mat;
   mat denom = 1 + mult_mat % exp(-abs(B) *  (lambda0 - lambda1));
   mat Gs = 1 / denom;
@@ -163,8 +159,8 @@ double threshold(double theta, double sigma2, double lambda1, double lambda0, do
 vec SSLASSO(vec &y, mat &X, vec &X_sumsq, vec &beta_old, double lambda1, double lambda0, vec &thetas, double sigma2) {
   int K = X.n_cols;
   vec beta = beta_old;
-  double eps = 0.05;
-  int max_iter = 100;
+  double eps = 0.001;
+  int max_iter = 500;
   int iter = 0;
   vec r = y - X * beta;
   vec z = zeros<vec>(K);
@@ -205,9 +201,6 @@ mat M_step_B(mat &Y, mat &B_old, mat &X, mat &ML, vec &sigmas, vec &thetas, doub
   vec Yj;
   vec out = zeros<vec>(K);
   for(int j = 0; j < G; j++) {
-    if (j % 100 == 0) {
-      Rcpp::checkUserInterrupt();
-    }
     Yj = Y_star.col(j);
     beta_old = trans(B_old.row(j));
     out = SSLASSO(Yj, X_star, X_sumsq, beta_old, lambda1, lambda0, thetas, sigmas(j));
