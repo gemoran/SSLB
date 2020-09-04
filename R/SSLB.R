@@ -1,16 +1,16 @@
 
 SSLB <- function(Y, 
                  K_init,
-                 lambda1,
-                 lambda0s,
-                 lambda1_tilde,
-                 lambda0_tildes,
+                 lambda1 = 1,
+                 lambda0s = c(1, 5, 10, 50, 100, 500, 1000, 10000, 100000, 1000000, 10000000),
+                 lambda1_tilde = 1,
+                 lambda0_tildes = c(1, rep(5, length(lambda0s) - 1)),
                  IBP = 1,
-                 a, 
+                 a = 1/K_init, 
                  b = 1, 
-                 a_tilde, 
+                 a_tilde = 1/K_init, 
                  b_tilde = 1, 
-                 alpha,
+                 alpha = 1/N,
                  d = 0,
                  EPSILON = 0.01, 
                  MAX_ITER = 500) {
@@ -22,17 +22,6 @@ SSLB <- function(Y,
     stop("Must provide initial value of K (K_init)")
   }
 
-  if (missing(a)) {
-    a <- 1/(K_init)
-  }
-  if (missing(a_tilde)) {
-    a_tilde <- 1/(K_init)
-  }
-
-  if (missing(alpha)) {
-    alpha <- 1/N
-  }
-  
   sigs <- apply(Y, 2, sd)
   
   sigquant <- 0.5
@@ -56,7 +45,7 @@ SSLB <- function(Y,
   
   nlambda <- length(lambda0s)
   
-  res <- cSSLB(Y, B_init, sigmas_init, Tau_init, thetas_init, theta_tildes_init, 
+  res <- .cSSLB(Y, B_init, sigmas_init, Tau_init, thetas_init, theta_tildes_init, 
     nus_init, lambda1, lambda0s, lambda1_tilde, lambda0_tildes, a, b, 
         a_tilde, b_tilde, alpha, d, eta, xi, sigma_min, IBP, EPSILON, MAX_ITER)
   
@@ -112,9 +101,7 @@ SSLB <- function(Y,
     }
 
   }
-  
-  
-  
+
   names_out <- c("X", "B", "Gamma_tilde", "ML", "K", "path", "init_B")
   names_path <- c("X", "B", "K", "Tau", "Gamma_tilde", "ML", "thetas", 
                   "theta_tildes", "sigmas", "lambda0s", "lambda1", 
