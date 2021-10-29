@@ -81,10 +81,119 @@ of \code{lambda0s}. Parameters are: \code{X}, \code{B}, \code{K}, \code{Tau},
 
 }
 \references{
-Moran, G., Rockova, V. and George, E.I. (2019) "Spike-and-Slab Lasso Biclustering" 
-Annals of Applied Statistics (Accepted)
+Moran, G., Rockova, V. and George, E.I. (2021) "Spike-and-Slab Lasso Biclustering" 
+Annals of Applied Statistics 
 }
 \author{
 Gemma Moran <gm2918@columbia.edu>
+}
+
+\examples{
+library(MASS)
+library(SSLB)
+
+set.seed(12345)
+
+N <- 300 # number of samples
+G <- 200 # number of features
+K <- 10 # number of biclusters
+K_init <- 20 # number of initial biclusters
+
+# generate data
+X <- matrix(0, nrow = N, ncol = K)
+X_bic <- matrix(0, nrow = N, ncol = K)
+overlap_X <- 5
+min_X_bic <- 10
+max_X_bic <- 25
+overlap_B <- 5
+min_B_bic <- 10
+max_B_bic <- 25
+for (k in 1:K) {
+  num <- sample(min_X_bic:max_X_bic, 1)
+  if (k > 1) {
+    prev <- apply(as.matrix(X_bic[, 1:(k - 1)]), 2, 
+    function(x) c(min(which(x != 0)), c(max(which(x != 0)))))
+    prev <- prev + c(-num + overlap_X, -overlap_X + 1)
+    prev <- as.matrix(prev[, prev[1, ] < prev[2, ]])
+    prev[prev < 0] <- 1
+    if(length(prev) > 0) {
+      remove <- unlist(apply(prev, 2, function(x) seq(x[1], x[2], by = 1)))
+      remove <- intersect(1:(N - num + 1), remove)
+      if (length(remove) > (N - num)) {
+        start <- sample(1:(N - num + 1), 1)
+        index <- start:(start + num - 1)
+      } else {
+        start <- sample((1:(N - num + 1))[-c(remove)], 1)
+        index <- start:(start + num - 1) 
+      }
+    } else {
+        start <- sample(1:(N - num + 1), 1)
+        index <- start:(start + num - 1)
+      }
+    } else {
+      start <- sample(1:(N - num + 1), 1)
+      index <- start:(start + num - 1) 
+    }
+  X[, k] <- rnorm(N, mean = 0, sd = 0.2)
+  sgn <- (-1 + 2 * rbinom(length(index), 1, 0.5))
+  X[index, k] <- rnorm(length(index), mean = sgn * 2, sd = 1)
+  X_bic[index, k] <- 1
+}
+B <- matrix(0, nrow = G, ncol = K)
+B_bic <- matrix(0, nrow = G, ncol = K)
+for (k in 1:K) {
+  num <- sample(min_B_bic:max_B_bic, 1)
+  if (k > 1) {
+      prev <- apply(as.matrix(B_bic[, 1:(k - 1)]), 2, 
+      function(x) c(min(which(x != 0)), c(max(which(x != 0)))))
+      prev <- prev + c(-num + overlap_B, -overlap_B + 1)
+      prev <- as.matrix(prev[, prev[1, ] < prev[2, ]])
+      prev[prev < 0] <- 1
+      if(length(prev) > 0) {
+        remove <- unlist(apply(prev, 2, function(x) seq(x[1], x[2], by = 1)))
+        remove <- intersect(1:(G - num + 1), remove)
+        if (length(remove) > (G - num)) {
+          start <- sample(1:(G - num + 1), 1)
+          index <- start:(start + num - 1)
+        } else {
+          start <- sample((1:(G - num + 1))[-c(remove)], 1)
+          index <- start:(start + num - 1) 
+        }
+      } else {
+        start <- sample(1:(G - num + 1), 1)
+        index <- start:(start + num - 1)
+      }
+    } else {
+      start <- sample(1:(G - num + 1), 1)
+      index <- start:(start + num - 1) 
+    }
+    B[, k] <- rnorm(G, mean = 0, sd = 0.2)
+    sgn <- (-1 + 2 * rbinom(length(index), 1, 0.5))
+    B[index, k] <- rnorm(length(index), mean = sgn * 3, sd = 1)
+    B_bic[index, k] <- 1
+}
+
+par(mfrow = c(2,2))
+image(t(X_bic))
+title(paste('X true, K = ', K))
+image(t(B_bic))
+title(paste('B true, K = ', K))
+
+Y <- X %*% t(B) + mvrnorm(N, numeric(G), Sigma = diag(G))
+
+out <- SSLB(Y, K_init)
+
+X_SSLB <- out$X
+B_SSLB <- out$B
+K_SSLB <- ncol(B_SSLB)
+
+X_SSLB[X_SSLB!=0]=1
+image(t(X_SSLB))
+title(paste('X SSLB estimate, K = ', K_SSLB))
+
+B_SSLB[B_SSLB!=0]=1
+image(t(B_SSLB))
+title(paste('B SSLB estimate, K = ', K_SSLB))
+
 }
 
